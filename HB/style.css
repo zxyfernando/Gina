@@ -1,0 +1,420 @@
+/* ===============================
+   Canvas de fondo interactivo
+   =============================== */
+#bgCanvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0; /* Detrás de todo el contenido */
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+/* Quitamos márgenes del body para prevenir scroll inesperado. */
+* { box-sizing: border-box; }
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent; /* fondo general */
+  font-family: "Montserrat", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  overflow: hidden; /* clave: evita scroll en la ventana */
+}
+
+/* ===== Poster wrapper - mantiene la proporción fija = poster scalable =====
+   Estrategia:
+   - poster-wrapper es un contenedor centrado en la pantalla
+   - poster (el lienzo) tiene dimensiones fijadas en px por JS según el viewport
+   - dentro, todo está posicionado con porcentajes relativos (fácil de ajustar)
+*/
+#poster-wrapper{
+  width: 100%;
+  height: 100vh; /* ocupamos todo el alto disponible */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1; /* Encima del canvas */
+  background: transparent;
+}
+
+/* ------------------------------------------------------------
+   El "poster" es el lienzo relativo; usamos position:relative
+   para que elementos absolute dentro usen sus porcentajes.
+   Le damos overflow: hidden para recortar si algún elemento sale.
+   ------------------------------------------------------------ */
+#poster{
+  position: relative;
+  /* Dimensiones reales (JS las ajusta al viewport) */
+  width: 900px;    /* ancho base de trabajo: reemplazable */
+  height: 1400px;  /* alto base de trabajo: reemplazable */
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  background: transparent; /* fondo del poster */
+  box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+  border-radius: 6px;
+}
+
+/* Capa de fondo si quieres una textura */
+.bg-fill{
+  position:absolute;
+  inset:0;
+   background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(15px) saturate(160%);
+  -webkit-backdrop-filter: blur(15px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  z-index: 0;
+}
+
+/* ====== Objetos (imágenes) - clase general ====== */
+.obj{
+  position: absolute;
+  display: block;
+  user-select: none;
+  pointer-events: none; /* para que no interfieran con clicks accidentalmente */
+  transform-origin: center center;
+  z-index: 5;
+  /* suaviza escalado/transform */
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+
+/* ====== Posiciones - ajusta porcentajes aquí si quieres mover algo ======
+   Las propiedades left / top / width se dan en % relativos al poster,
+   y funcionan bien al escalar el poster con JS.
+*/
+
+/* 26 (número gigante) - centrado alto */
+.obj-26{
+  left: 31%;
+  top: 4.5%;
+  width: 36%;
+  transform: translateX(-50%);
+  z-index: 8;
+  animation: float-slow 6s ease-in-out infinite;
+}
+
+/* Disco ball izquierda - ligeramente rotada */
+.obj-disco-left{
+  left: -12.5%;
+  top: -6.5%;
+  width: 47%;
+  transform: rotate(-12deg); /* <-- Se aplica la rotación inicial */
+  z-index: 6;
+  animation: float-small 5s ease-in-out infinite; /* <-- Ejecuta float-small */
+}
+
+/* Disco ball derecha */
+.obj-disco-right{
+  right: -15.5%;
+  top: -8.5%;
+  width: 45%;
+  transform: rotate(8deg);
+  z-index: 6;
+  animation: float-small 5s ease-in-out infinite;
+}
+
+/* Copa (izquierda arriba medio) */
+.obj-copa{
+  left: -0.5%;
+  top: 20%;
+  width: 13%;
+  transform: rotate(45deg);
+  z-index: 7;
+  animation: float-tiny 4.2s ease-in-out infinite;
+}
+
+/* Globos (lado izquierdo, medio) */
+.obj-globos{
+  left: -17.5%;
+  top: 38%;
+  width: 45%;
+  z-index: 7;
+  animation: float-slow 5.8s ease-in-out infinite;
+}
+
+/* Bouquet (abajo-izq, ligeramente girado) */
+.obj-bouquet{
+  left: -23%;
+  bottom: -12%;
+  width: 68%;
+  transform: rotate(-12deg);
+  z-index: 6;
+  animation: float-small 6.2s ease-in-out infinite;
+}
+
+/* Botella (derecha, arriba) */
+.obj-botella{
+  right: 6%;
+  top: 25%;
+  width: 8%;
+  z-index: 7;
+  animation: float-tiny 4.8s ease-in-out infinite;
+}
+
+/* Estrella 1 (derecha medio) */
+.obj-star1{
+  right: -5%;
+  top: 38%;
+  width: 23%;
+  z-index: 7;
+  animation: float-small 5s ease-in-out infinite;
+}
+
+/* Estrella 2 (izq medio alto) */
+.obj-star2{
+  left: 82.5%;
+  top: 53.5%;
+  width: 17%;
+  z-index: 7;
+  animation: float-small 5.5s ease-in-out infinite;
+}
+
+/* Beso (derecha medio-bajo) */
+.obj-beso{
+  right: -4%;
+  top: 57%;
+  width: 45%;
+  z-index: 7;
+  animation: float-tiny 6s ease-in-out infinite;
+}
+
+/* Brindis (medio bajo) */
+.obj-brindis{
+  left: 41.5%;
+  top: 84.5%;
+  width: 17%;
+  z-index: 7;
+  animation: float-small 5.5s ease-in-out infinite;
+}
+
+/* ---- Chica: ANCLADA en el borde inferior (estática visualmente),
+         ocupa una parte derecha grande del poster ---- */
+.obj-chica{
+  right: -3%;
+  bottom: 0%;
+  width: 22%;
+  z-index: 10;
+  transform-origin: bottom right;
+  /* no animation: stays static; if quieres un sutil float, quita la línea siguiente */
+  /* animation: float-tiny 8s ease-in-out infinite; */
+}
+
+/* ===== Textos centrales (se posicionan con porcentaje y tipografías) ===== */
+.text-group{
+  position: absolute;
+  left: 50%;
+  top: 28%;
+  transform: translateX(-50%);
+  width: 70%;
+  text-align: center;
+  z-index: 9;
+  pointer-events: none;
+}
+
+/* HAPPY: small caps, serif */
+.happy{
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 2.75rem; /* escala en relación al poster */
+  letter-spacing: 4px;
+  font-weight: 500;
+  color: #5e3a3a;
+  margin-bottom: 6px;
+}
+
+/* Birthday: script grande */
+.birthday{
+  font-family: "Great Vibes", cursive;
+  font-size: 7.25rem;
+  line-height: 0.85;
+  color: #6e3f3f;
+  margin-bottom: -15px;
+}
+
+/* GINA: Bebas Neue - condensada */
+.gina{
+  font-family: "Bebas Neue", "Oswald", sans-serif;
+  font-size: 8.4rem;
+  letter-spacing: 4px;
+  color: #6e3f3f;
+  margin-bottom: -8px;
+}
+
+/* Invitación: texto secundario */
+.invite{
+  font-family: "Montserrat", sans-serif;
+  font-size: 2.05rem;
+  color: #111;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  margin-top: 8px;
+  margin-bottom: 18px;
+}
+
+/* Divider decorativo (línea rosa) */
+.divider{
+  height: 6px;
+  width: 60%;
+  margin: 0 auto 18px auto;
+  background: linear-gradient(90deg,#c85d63,#e9b2b7);
+  border-radius: 3px;
+}
+
+/* Fecha y hora (tipografía serif con mayúsculas) */
+.fecha{
+  font-family: "Playfair Display", serif;
+  color: #2b2b2b;
+  font-size: 3.05rem;
+  margin-bottom: 14px;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+.fecha .hora{
+  display:block;
+  font-weight: 600;
+}
+
+/* Dirección (thin sans) */
+.address{
+  font-family: "Montserrat", sans-serif;
+  font-weight: 300;
+  font-size: 1.35rem;
+  letter-spacing: 1.6px;
+  color: #111;
+  margin-top: 8px;
+}
+
+/* Cash Bar */
+.cashbar{
+  font-family: "Montserrat", sans-serif;
+  font-weight: 600;
+  font-size: 1.85rem;
+  text-align: center;
+  margin-top: 0;
+  position: absolute;
+  left: 50%;
+  /* Usamos 'bottom' para que se posicione desde abajo del póster */
+  bottom: -21.5%; /* Ajusta este porcentaje para subirlo o bajarlo */
+  transform: translateX(-50%);
+  width: 70%;
+  z-index: 9;
+  pointer-events: none;
+}
+
+/* ===============================
+   ✨ EFECTO DE ESTRELLITAS DORADAS
+   =============================== */
+.star {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+  background: transparent;
+  border-radius: 50%;
+  transform: rotate(var(--rot));
+  z-index: 9999;
+  animation: star-anim 1s ease-out forwards;
+}
+
+.star::before,
+.star::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2px;
+  height: 10px;
+  background: linear-gradient(180deg, #fff8c0 0%, #ffd900 50%, #c8fff6 100%);
+  transform: translate(-50%, -50%) rotate(0deg);
+  border-radius: 2px;
+}
+.star::after {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+/* ===============================
+   💬 BOTÓN DE WHATSAPP - Confirmar asistencia
+   =============================== */
+.whatsapp-btn {
+  position: absolute;
+  right: 6%; /* al costado de la chica */
+  bottom: 4%; /* un poco por encima del borde inferior */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #25D366, #1EBE57);
+  color: white;
+  text-decoration: none;
+  font-family: "Montserrat", sans-serif;
+  font-weight: 600;
+  font-size: 1.25rem;
+  padding: 12px 18px;
+  border-radius: 50px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  transition: all 0.25s ease;
+  z-index: 15; /* encima de todo */
+}
+
+.whatsapp-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+}
+
+.whatsapp-icon {
+  width: 28px;
+  height: 28px;
+  filter: drop-shadow(0 0 3px rgba(0,0,0,0.3));
+}
+
+/* Responsividad: en pantallas pequeñas el botón se centra más */
+@media (max-width: 768px) {
+  .whatsapp-btn {
+    right: 10%;
+    transform: translateX(50%);
+    bottom: 2%;
+    font-size: 1rem;
+    padding: 5px 7px;
+  }
+
+  .whatsapp-icon {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+@keyframes star-anim {
+  0% {
+    opacity: 1;
+    transform: scale(0.8) rotate(var(--rot));
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.4) rotate(calc(var(--rot) + 45deg));
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.2) rotate(calc(var(--rot) + 90deg)) translateY(-10px);
+  }
+}
+
+/* ===== Animaciones flotantes sutiles ===== */
+@keyframes float-slow {
+  0% { transform: translateY(0px) translateX(0px) scale(1); }
+  50% { transform: translateY(-8px) translateX(2px) scale(1.01); }
+  100% { transform: translateY(0px) translateX(0px) scale(1); }
+}
+@keyframes float-small {
+  0% { transform: translateY(0px) translateX(0px) rotate(0deg); }
+  50% { transform: translateY(-6px) translateX(-2px) rotate(1deg); }
+  100% { transform: translateY(0px) translateX(0px) rotate(0deg); }
+}
+@keyframes float-tiny {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+  100% { transform: translateY(0px); }
+}
+
+/* ===== Responsive tweaks: si el poster base tuviera que cambiar, ajusta font-sizes en % ===== */
+/* Las fuentes están en rem (relativas al navegador) para que a escala también se vean bien.
+   Si deseas que las fuentes escalen exactamente con el poster, puedes manipular el root font-size
+   desde JS según la escala aplicada. (En este ejemplo usamos tamaños fijos que funcionan con el resize JS). */

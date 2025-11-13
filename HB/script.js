@@ -190,7 +190,6 @@ const imgSources = [
   'assets/estrella3.jpg',
   'assets/estrella4.jpg',
   'assets/estrella5.jpg',
-  'assets/jona.png'
 ];
 const loadedImgs = [];
 
@@ -227,4 +226,5 @@ document.addEventListener('mousemove', e => {
 document.addEventListener('touchmove', e => {
   mouse.x = e.touches[0].clientX;
   mouse.y = e.touches[0].clientY;
+
 });
